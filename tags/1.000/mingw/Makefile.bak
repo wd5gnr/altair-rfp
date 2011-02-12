@@ -1,0 +1,24 @@
+# Source files live where?
+SRC=..
+
+
+CC=i586-mingw32msvc-gcc
+CXX=i586-mingw32msvc-g++
+CFLAGS=-g -D NOTELNET
+CPPFLAGS=$(CFLAGS)
+LDFLAGS=
+LOADLIBES=
+LDLIBS=
+VPATH=$(SRC)
+SRCS=rs232w.c rfp.cpp cpu.cpp iobase.cpp outfile.cpp contterm.cpp iotelnet.cpp breakpoint.cpp
+
+
+altairrfp.exe : rs232w.o rfp.o cpu.o iobase.o outfile.o contterm.o iotelnet.o breakpoint.o
+	$(CXX) $(CPPFLAGS) -o altairrfp.exe rs232w.o rfp.o cpu.o iobase.o outfile.o contterm.o iotelnet.o  breakpoint.o
+
+depend:
+	( cd .. ; makedepend -fmingw/Makefile -I`echo | $(CC) -x c -Wp,-v - 2>&1| grep '^ /'` -- $(CFLAGS) -- $(SRCS) )
+
+clean :
+	rm *.o altairrfp.exe
+
