@@ -1,0 +1,21 @@
+
+
+%.d: %.c
+	@set -e; rm -f $@; \
+	$(CC) -MM $(CFLAGS) $< | sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' > $@; 
+
+
+%.d: %.cpp
+	@set -e; rm -f $@; \
+	$(CXX) -MM $(CXXFLAGS) $< |  sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' > $@; 
+
+
+DEPS0=$(SRCS:.cpp=.d)
+DEPS=$(DEPS0:.c=.d)
+
+ifneq ($(MAKECMDGOALS),clean)
+include $(DEPS)
+endif
+
+
+	
