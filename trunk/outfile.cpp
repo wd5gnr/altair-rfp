@@ -1,0 +1,41 @@
+/***********************************************************************
+This file is part of Altairrfp, an Altair 8800 simulator.
+Altairrfp can work standalone or with the Briel Micro8800
+computer in remote mode as a front panel.
+
+For more information, see http://www.hotsolder.com (Altairrfp)
+or http://www.brielcomputers.com (Micro8800)
+
+Altairrfp (c) 2011 by Al Williams. 
+
+    Altairrfp is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Altairrfp is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Altairrfp.  If not, see <http://www.gnu.org/licenses/>.
+
+***********************************************************************/
+#include "outfile.h"
+
+outfile::outfile(streamtype type, const char *fn) : iobase(type)
+{
+  fp=fopen(fn,"w");
+}
+
+void outfile::putchar (int c)
+{
+  if (fp) fputc(c,fp);
+}
+
+outfile::~outfile()
+{
+  if (fp) fclose(fp);
+}
+
