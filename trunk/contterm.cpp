@@ -474,7 +474,7 @@ struct cmdentry
     { "help", f_help , "help [keyword] - Get help" },
     { "hex", f_hex, "hex - Set default radix to hex (override # -decimal, & - octal, $ - hex)"  },
     { "load", f_load, "load file - Load RAM with file" },
-    { "n", f_n, " n - step (*number) + regs command"  },
+    { "n", f_n, "n - step + regs command"  },
     { "oct", f_oct,  "oct - Set default radix to octal (override # -decimal, & - octal, $ - hex)" },
     { "reg", f_reg,  "reg register [value] - Display/set register (AF, BC, DE, HL, SP, PC for 8080" },
     { "regs", f_regs, "regs - Show all registers" },
