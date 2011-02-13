@@ -22,7 +22,10 @@ Altairrfp (c) 2011 by Al Williams.
     along with Altairrfp.  If not, see <http://www.gnu.org/licenses/>.
 
 ***********************************************************************/
+// Control terminal
+
 #include "iobase.h"
+#include "contterm.h"
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -46,28 +49,29 @@ extern "C"
 }
 
 
+// These are used to virtually flip switches on the front panel (even if we don't have one)
 volatile int virt_switch=0;
 volatile int virt_smask=0;
 volatile int virt_sreset=0;
 
-int base=0x10;
-
+int base=0x10; // default number base (must be 0x10 or 010).
+ 
 // Convert a string to a number
 // use default radix unless number starts with # (dec), & (octal), or $ (hex)
 unsigned strtonum(const char *t)
 {
-  int abase=base;
-  if (*t=='$') 
+  int abase=base;  // assumed base
+  if (*t=='$')   // hex
     {
       t++;
       abase=0x10;
     }
-  else if (*t=='#')
+  else if (*t=='#')  // dec
     {
       t++;
       abase=10;
     }
-  else if (*t=='&')
+  else if (*t=='&')  // oct
     {
       t++;
       abase=010;
@@ -88,6 +92,8 @@ unsigned getval(int *success=NULL)
 
 
 // Get a command line (optional prompt)
+// ends is a string that sets the allowable end of "line" (default \r\n but set can use space)
+// returns -1 for escape (cancel)
 int getcline(const char *prompt, const char *ends=NULL)
 {
   int cp=0;
@@ -99,12 +105,13 @@ int getcline(const char *prompt, const char *ends=NULL)
     {
       c=iobase::getchar(iobase::CONTROL);
       if (c=='\0'||c==-1) continue;
-      if (c=='\x1b') return -1;
+      if (c=='\x1b') return -1;  // escape cancels
       if (c!='\x7f') iobase::putchar(iobase::CONTROL,c);  // echo
-      if (c=='\x7f') 
+      if (c=='\x7f') // if a rub out
 	{
-	  if (cp) 
+	  if (cp) // if not at start of line
 	    {
+	      // backspace over the last character and discard
 	      cp--;
 	      iobase::putchar(iobase::CONTROL,'\010');
 	      iobase::putchar(iobase::CONTROL,' ');
@@ -112,14 +119,17 @@ int getcline(const char *prompt, const char *ends=NULL)
 	    }
 	  continue;
 	}
+      // end of line?
       if (strchr(ends,c))
 	{
-	  if (c!='\r') iobase::putchar(iobase::CONTROL,'\r');
-	  iobase::putchar(iobase::CONTROL,'\n');
-	  cmdbuf[cp]='\0';
-	  return 0;
+	  if (c!='\r') iobase::putchar(iobase::CONTROL,'\r');  // echo return if it wasn't
+	  iobase::putchar(iobase::CONTROL,'\n');  // and add a new line
+	  cmdbuf[cp]='\0';  // end string
+	  return 0;    // done!
 	}
+      // add to buffer
       cmdbuf[cp++]=c;
+      // if we are at the end (really?) then force an end
       if ((cp+1)==sizeof(cmdbuf)) 
 	{
 	  cmdbuf[cp]='\0';
@@ -133,7 +143,6 @@ int getcline(const char *prompt, const char *ends=NULL)
 void f_exit(void)
 {
   // at exit should close keyboard!
-  //  close_keyboard();
   exit(0);
 }
 
@@ -183,6 +192,7 @@ void f_step(void)
 
 
 
+// TODO: save and load need start address and count (see f_disp)
 void f_save(void)
 {
   char *t=strtok(NULL,"\r\n");
@@ -202,11 +212,12 @@ void f_disp(void)
 {
   unsigned add,end;
   int i,j;
-  add=getval();
-  end=getval();
-  if (!end) end=256;
+  add=getval();  // get address
+  end=getval();  // get count
+  if (!end) end=256;  // default count to 256
   end+=add;
   j=0;
+  // do the print in the proper base
   while (add+j*16<=end)
     {
       iobase::printf(iobase::CONTROL,base==0x10?"%04X: ":"%06o: ",add+j*16);
@@ -249,13 +260,13 @@ void f_reg(void)
       iobase::printf(iobase::CONTROL,"reg register_name [value]\r\n");
       return;  
     }
-  
+  // if there is a new value we have to set it
   newv=getval(&ok);
   if (base==0x10)
     fmt="%s=%04X\r\n";
   else 
     fmt="%s=%06o\r\n";
-  if (!ok)
+  if (!ok)  // display only
     {
       char *t=regstring;
       while (*t) 
@@ -267,9 +278,11 @@ void f_reg(void)
       iobase::printf(iobase::CONTROL,fmt,regstring,v);
       return;
     }
+  // set value instead of display
   thecpu->setreg(regstring,newv);
 }
 
+// radix changers
 
 void f_hex(void) 
 {
@@ -282,7 +295,7 @@ void f_oct(void)
 }
 
 
-
+// show registers
 void f_regs(void)
 {
   if (!thecpu) return;
@@ -315,6 +328,7 @@ void f_n(void)
 }
 
 
+// Breakpoint (manu subcommands)
 void f_bp(void)
 {
   char *tag=strtok(NULL," \t,");
@@ -340,7 +354,7 @@ void f_bp(void)
     }
   if (!strcasecmp(tag,"list"))
     {
-      // list all breakpoints
+      // list all breakpoints (or just one)
       int i;
       // static member for breakpoint?
       iobase::printf(iobase::CONTROL,"ID ON  COND\t\t\tCOUNT\tACTION\r\n");
@@ -366,7 +380,7 @@ void f_bp(void)
   if (!tag || !*tag) goto bphelp;
   if (!strcasecmp(tag,"set"))
     {
-      char *tmp;
+      char *tmp;   // set a match breakpoint
       unsigned v;
       unsigned mask;
       mask=0xFFFF;
@@ -385,7 +399,7 @@ void f_bp(void)
       theRFP->bps[bp].init(1,tag,v,mask);
       return;
     }
-  if (!strcasecmp(tag,"onchange"))
+  if (!strcasecmp(tag,"onchange"))  // set a change breakpoint
     {
       unsigned mask=0xFFFF;
       char *tmp;
@@ -396,7 +410,7 @@ void f_bp(void)
       theRFP->bps[bp].init(1,tag,0x10000,mask);
       return;
     }
-  if (!strcasecmp(tag,"action"))
+  if (!strcasecmp(tag,"action"))  // set action
     {
       int act=-1;
       tag=strtok(NULL," \t,");
@@ -417,7 +431,7 @@ void f_bp(void)
       theRFP->bps[bp].action=act;
       return;
     }
-  if (!strcasecmp(tag,"count"))
+  if (!strcasecmp(tag,"count"))  // set count
     {
       unsigned v;
       tag=strtok(NULL," \t,");
@@ -426,17 +440,17 @@ void f_bp(void)
       theRFP->bps[bp].setcount(v);
       return;
     }
-  if (!strcasecmp(tag,"on"))
+  if (!strcasecmp(tag,"on"))  // enable 
     {
       theRFP->bps[bp].setstate(1);
       return;
     }
-  if (!strcasecmp(tag,"off"))
+  if (!strcasecmp(tag,"off"))  // disable
     {
       theRFP->bps[bp].setstate(0);
       return;
     }
-  if (!strcasecmp(tag,"once"))
+  if (!strcasecmp(tag,"once"))  // set one shot flag
     {
       int n=0;
       tag=strtok(NULL," \t,");
@@ -444,7 +458,7 @@ void f_bp(void)
       theRFP->bps[bp].oneshot=n;
       return;
     }
-  if (!strcasecmp(tag,"resume"))
+  if (!strcasecmp(tag,"resume"))   // resume from this breakpoint (note: bp X resume is not the same as just resume; see f_resume)
     {
       theRFP->bps[bp].setstate(-1);
       return;
@@ -452,6 +466,7 @@ void f_bp(void)
   goto bphelp;
 }
 
+// Resume from all breakpoints
 void f_resume(void)
 {
   for (int i=0;i<27;i++) 
@@ -459,7 +474,7 @@ void f_resume(void)
 }
 
 
-
+// command table -- string, function, help text
 
 struct cmdentry
 {
@@ -489,6 +504,7 @@ struct cmdentry
       
   };
 
+// Print a breakpoint when it hits (called by the breakpoint)
 void print_bp(char id)
 {
   if (id=='Z'+1) return;
@@ -513,7 +529,7 @@ void do_help(const char *k)
 
 
 
-
+// This is the thread function that does the control terminal
 
 void *controlterm(void *nothing)
 {
