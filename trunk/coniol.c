@@ -25,13 +25,16 @@ Altairrfp (c) 2011 by Al Williams.
 #include <termios.h>
 #include <unistd.h>   // for read()
 
-#include <stdio.h> // temporary for fprintf stderr debugging
+// This is the terminal functions
+// to get a single character from the keyboard
+// for Linux
 
 static struct termios initial_settings, new_settings;
 static int peek_character = -1;
 
-static kopen=0;
+static int kopen=0;
 
+// Start up the keyboard
 void init_keyboard(void)
 {
     if (kopen) return;
@@ -49,6 +52,7 @@ void init_keyboard(void)
     kopen=1;
 }
 
+// stop the keyboard (important because we put it in a funky mode)
 void close_keyboard(void)
 {
   if (kopen)
@@ -66,6 +70,7 @@ void close_keyboard(void)
   
 }
 
+// return 1 if a key is waiting to be read
 int kbhit(void)
 {
 unsigned char ch;
@@ -85,6 +90,7 @@ int nread;
     return 0;
 }
 
+// Get a character
 int getch(void)
 {
 char ch;

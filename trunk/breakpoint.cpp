@@ -24,11 +24,14 @@ Altairrfp (c) 2011 by Al Williams.
 ***********************************************************************/
 #include "breakpoint.h"
 #include "cpu.h"
+#include "contterm.h"
 #include <string.h>
+
+// See important comments in breakpoint.h
 
 breakpoint::breakpoint()
 {
-  lasthit=0;
+  lasthit=0;   // initial conditions
   state=0;
   oneshot=0;
   count=0;
@@ -42,12 +45,10 @@ breakpoint::breakpoint()
   id='?';
 }
 
-// really should fix this
-extern unsigned strtonum(const char *t);
 
 void breakpoint::init(int st, const char *target,  unsigned v, unsigned msk)
 {
-  state=st;
+  state=st;    // set up without constructing new
   value=v;
   mask=msk;
   announced=0;
@@ -56,23 +57,23 @@ void breakpoint::init(int st, const char *target,  unsigned v, unsigned msk)
   countreset=0;
   oneshot=0;
   action=0;
-  if (*target=='@') 
+  if (*target=='@')   // target of @xxx is an address
     {
       address=strtonum(target+1);
       ttype=0;
     }
-  else
+  else  // must be a register
     {
       strcpy(reg,target);
       ttype=1;
     }
-  if (!thecpu) lastvalue=0;  // what else can you do?
-  else if (value>=0x10000)
+  if (!thecpu) lastvalue=0;  // what else can you do? No CPU means no last value
+  else if (value>=0x10000)  // change bp?
     {
       if (ttype==0)
-	lastvalue=thecpu->ram.read(address,0);
+	lastvalue=thecpu->ram.read(address,0);  // prime lastvalue
       else
-	lastvalue=thecpu->getreg(reg);
+	lastvalue=thecpu->getreg(reg);  // prime with register
     }
 }
 
@@ -87,19 +88,21 @@ int breakpoint::check(void)
 {
   int hit=0;
   unsigned target;
-  if (state==0) return -1;
+  if (state==0) return -1;  // ignore disabled breakpoint
+  // get current value
   if (ttype==0)
     target=thecpu->ram.read(address,0);
   else
     target=thecpu->getreg(reg);
+  // if value == 0x10000 then this is a change bp
   if (value<0x10000)
     {
       target&=mask;
-      hit=target==value;
+      hit=target==value;   // simple match bp
     }
   else
     {
-      hit=((target&mask)!=(lastvalue&mask));
+      hit=((target&mask)!=(lastvalue&mask));  // change bp
     }
   // so at this point we kind of know if we have a hit or not
   // but we need to check state, and count
@@ -118,7 +121,9 @@ int breakpoint::check(void)
       lasthit=0;
       return -1;
     }
+  // reset counting breakpoints that are resuming just in case
   if (hit && state==-1 && countreset) count=countreset;
+  // if on hold then ignore any hit
   if (hit && state==-1) return -1;  // we are on hold so no hit
   if (!hit && countreset)    // if we are counting and this wasn't a hit
     {
@@ -126,34 +131,38 @@ int breakpoint::check(void)
       if (!count) count=countreset;  // if count was zero, put it back
     }
   
+  // check for counting supression
   if (hit)
     {
       // is this a counting bp?
       if (countreset)
-	if (count && !lasthit)   // are we counting
+	if (count && !lasthit)   // are we counting?
 	{
 	  count--;
 	  if (count!=0) hit=0; else  lasthit=1; 
 	}
     }
   
-
+  // Check if we should reset a one shot
   if (oneshot) 
     {
       if (lasthit && !hit)  state=0;
       lasthit=hit;
     }
       
-
+  // if we have a hit here we are at a breakpoint
+  // but if we are stopping and haven't already 
+  // announced then we ask contterm.cpp to print for us
   if (hit && !announced && action==0)
     {
-      extern void print_bp(char id);
       announced=1;
       print_bp(id);
     }
+  // done!
   return hit?action:-1;
 }
 
+// accessors/setters
 void breakpoint::setcount(unsigned c)
 {
   count=countreset=c;
@@ -164,6 +173,7 @@ unsigned breakpoint::getcount(void)
   return count;
 }
 
+// Changing state needs to clear announce flag
 void breakpoint::setstate(int s)
 {
   state=s;
@@ -175,6 +185,7 @@ int breakpoint::getstate(void)
   return state;
 }
 
+// Dump out breakpoint for the list code in contterm
 void breakpoint::dump(iobase::streamtype s, int base)
 {
   char tstring[16];

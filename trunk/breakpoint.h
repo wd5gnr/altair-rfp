@@ -29,24 +29,24 @@ class CPU;
 class RFP;
 #include "iobase.h"
 
-
+// This class represents a single breakpoint
 class breakpoint
 {
  protected:
-  unsigned lasthit;  // used for one shot
-  unsigned lastvalue;
-  unsigned count;
-  unsigned countreset;
-  int announced;
+  unsigned lasthit;  // used for one shot, etc.
+  unsigned lastvalue;  // used for change breakpoints
+  unsigned count;    // count must be 0 to fire 
+  unsigned countreset;  // reset value for counts
+  int announced;    // if 1 supress more messages
   int state;  // 1= active, 0=inactive, -1=hold
  public:
-  char id;
-  int oneshot;
-  int ttype;
-  unsigned address;
-  char reg[16];
-  unsigned mask;    // if mask==0 then on change bp
-  unsigned value;
+  char id;   // A-Z
+  int oneshot;  // if 1, this breakpoint disables after it fires
+  int ttype;    // do we match/change an address or a register?
+  unsigned address;  // address to match/monitor
+  char reg[16];      // register name to match/monitor (name so we can be CPU independent)
+  unsigned mask;    // value is masked (ANDed) against this
+  unsigned value;  // value == 0x10000 means we are looking for change!
   int action; // 0= stop, 1=trace, 0x80+# = enable 0x40+# = disable
   breakpoint();
   breakpoint(int st,const char *target, unsigned v, unsigned msk=0xFFFF);
@@ -56,8 +56,12 @@ class breakpoint
   unsigned getcount(void);
   void setstate(int s);
   int getstate(void);
+  // check to see if breakpoint is active
+  // note this happens over and over, so it isn't like the breakpoint fires 
+  // and then goes to zero. It stays "hit" until the condition is cleared
+  // which means we have to do things like set state to -1 (hold) to resume
   int check(void);
-      //-- if tempinactive and hit do nothing, if tempinative and no hit set active, if iactive and hit that's a real hit if inactive do nothing
+  // dump breakpoint info to stream in base
   void dump(iobase::streamtype,int base);
   
 

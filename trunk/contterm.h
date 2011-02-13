@@ -22,14 +22,16 @@ Altairrfp (c) 2011 by Al Williams.
     along with Altairrfp.  If not, see <http://www.gnu.org/licenses/>.
 
 ***********************************************************************/
+#ifndef _CONTTERM_H
+#define _CONTERM_H
 
-#ifndef _CONIOL_H
-#define _CONIOL_H
+// Just a few things that conterm exports for other people
+// this converts a string to a number using our
+// default base and syntax ($hex, &oct, #decimal or default base from contterm.cpp)
+extern unsigned strtonum(const char *t);
 
-void init_keyboard(void);   // set up keyboard
-void close_keyboard(void);  // put keyboard to normal
-int kbhit(void);    // return 1 if key is waiting to be read
-int getch(void);   // return key
+// break point annunciation
+extern void print_bp(char id);
+
 
 #endif
-
