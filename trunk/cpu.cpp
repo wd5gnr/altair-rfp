@@ -26,15 +26,8 @@ Altairrfp (c) 2011 by Al Williams.
 #include <ctype.h>
 
 
-extern int upper;
 
-
-
-
-// Todo:
-// Flesh out IN and OUT for sense switch and SIO
-//
-
+// Reset
 void CPU::reset(void)
 {
   pc=0;
@@ -48,6 +41,7 @@ void CPU::reset(void)
   sp&=0xFFFF; 
 }
 
+// Set flags after an instruction
 unsigned CPU::setflags(unsigned value, unsigned savemask)
 {
   unsigned oldflags;
@@ -65,6 +59,7 @@ unsigned CPU::setflags(unsigned value, unsigned savemask)
 }
 
 
+// Computer parity for flags
 unsigned CPU::parity(unsigned v)
 {
   unsigned bit=0;
@@ -74,6 +69,7 @@ unsigned CPU::parity(unsigned v)
 }
 
 
+// Get 8 bits M (that is [HL])
 unsigned CPU::getM8(void)
 {
   unsigned a=(regs[H]<<8)+regs[L];
@@ -81,6 +77,7 @@ unsigned CPU::getM8(void)
 }
 
 
+// set 8 bit M
 void CPU::setM8(unsigned v)
 {
   unsigned a=(regs[H]<<8)+regs[L];
@@ -88,7 +85,7 @@ void CPU::setM8(unsigned v)
 }
 
 
-
+// get an 8 bit operand (A, B, C, ...M)
 unsigned CPU::loadop8(unsigned r)
 {
   if (r==6) return getM8();
@@ -97,6 +94,7 @@ unsigned CPU::loadop8(unsigned r)
 }
 
 
+// Set an 8 bit operand (A, B, C, ... M)
 void CPU::setop8(unsigned r,unsigned v)
 {
   if (r==6) setM8(v);
@@ -107,6 +105,7 @@ void CPU::setop8(unsigned r,unsigned v)
     }
 }
 
+// Get conditional part
 unsigned CPU::getcond(unsigned cc)
 {
   unsigned c;
@@ -126,7 +125,7 @@ unsigned CPU::getcond(unsigned cc)
 
 
 
-
+// Do an opcode
 void CPU::doop(unsigned opcode)
 {
   static unsigned r1,r2,op1,op2;
@@ -152,7 +151,7 @@ void CPU::doop(unsigned opcode)
     case 0x31:
       r1=(opcode&0x30)>>4;
       if (r1!=3) r1*=2;
-      switch (++cycle)
+      switch (++cycle)  // which part of the LXI am I doing?
 	{
 	case 1: break;
 	case 2: if (r1!=3) regs[r1+1]=ram.read(incpc()); else t1=ram.read(incpc()); break;
@@ -192,7 +191,7 @@ void CPU::doop(unsigned opcode)
       regs[r1+1]&=0xFF;
       break;
 
-    case 0x3B:
+    case 0x3B:  // DCX SP
       sp--;
       sp&=0xFFFF;
       break;
@@ -850,13 +849,14 @@ void CPU::doop(unsigned opcode)
 
 
 
+// Do a step
 void CPU::step(void)
 {
   if (!cycle) opcode=ram.read(incpc());
   doop(opcode);
 }
 
-
+// Dump state
 void CPU::dump(iobase::streamtype s, int base)
 {
 
@@ -868,6 +868,7 @@ void CPU::dump(iobase::streamtype s, int base)
 
 }
 
+// Get a register by name
 unsigned CPU::getreg(const char *regstring)
 {
   // first letter is A, B, D, H, S, or P
@@ -908,6 +909,7 @@ unsigned CPU::getreg(const char *regstring)
    
 }
 
+// set a register by name
 void CPU::setreg(const char *regstring,unsigned val)
 {
   // first letter is A, B, D, H, S, or P

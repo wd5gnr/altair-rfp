@@ -382,6 +382,7 @@ void RFP::execute(RAM& ram)
   setstate();
   CPU cpu(ram,*this);
   thecpu=&cpu;
+  thecpu->upper=upper;
   while (1)
     {
       int func=runonly?1:getSWFunc();

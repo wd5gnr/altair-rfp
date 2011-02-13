@@ -40,6 +40,7 @@ Altairrfp (c) 2011 by Al Williams.
 #include "cpu.h"
 #include "rfp.h"
 
+// command line buffer
 char cmdbuf[1024];
 pthread_t controlthread;
 
