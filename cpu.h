@@ -31,25 +31,28 @@ Altairrfp (c) 2011 by Al Williams.
 class CPU
 {
  protected:
-  unsigned cycle;
-  unsigned parity(unsigned v);
-  unsigned opcode;
+  unsigned cycle;   // which subcycle are we in on multipart instructions
+  unsigned parity(unsigned v);  // compute parity
+  unsigned opcode;    // current opcode
    // temporaries for instructions
   unsigned t1,t2;
-  unsigned cond;
-  unsigned getM8(void);
-  void setM8(unsigned v);
-  void setop8(unsigned r, unsigned v);
-  unsigned loadop8(unsigned r);
-  unsigned  getcond(unsigned op);
-  RFP &rfp;
+  unsigned cond;   // condition
+  unsigned getM8(void);   // get M
+  void setM8(unsigned v);  // set M
+  void setop8(unsigned r, unsigned v);  // set an 8 bit op
+  unsigned loadop8(unsigned r);  // load an 8 bit op
+  unsigned  getcond(unsigned op);  // get conditional part
+  RFP &rfp;  // reference back to RFP
+  // modify pc or sp
   unsigned incpc(void)  { unsigned t=pc; pc++; pc&=0xFFFF; return t; }
   unsigned incsp(void)  { unsigned t=sp; sp++; sp&=0xFFFF; return t; }
   void decsp(void)  { sp--; sp&=0xFFFF; }
     
  public:
- CPU(RAM& r,RFP& rp) : ram(r), rfp(rp) { reset(); } 
+ CPU(RAM& r,RFP& rp) : ram(r), rfp(rp) { upper=0; reset(); } 
+  // reset CPU
   void reset(void);
+  // Are we at the start of an instruction (1) or in the middle of one? (0)
   int isInst(void) { return cycle==0;   }
   
   // registers
@@ -61,13 +64,17 @@ class CPU
    RAM &ram;
   // step
    void step(void);
+   // Do an opcode
    void doop(unsigned opcode);
+   // set flags after instruction
    unsigned setflags(unsigned value, unsigned savemask);
    // support for trace and control
    void dump(iobase::streamtype s=iobase::TRACE, int base=0x10);
+   // set or get register by name
    void setreg(const char *regstring,unsigned val);
    unsigned getreg(const char *regstring);
-     
+   // do we conert input to uppercase for SIO?
+   int upper;
 };
 
 #endif
