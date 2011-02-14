@@ -25,6 +25,8 @@ Altairrfp (c) 2011 by Al Williams.
 #include "iobase.h"
 #include <stdio.h>
 
+// stream that is an output file (no input)
+
 class outfile : public iobase
 {
  protected:

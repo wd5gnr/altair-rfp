@@ -29,11 +29,12 @@ Altairrfp (c) 2011 by Al Williams.
 #define pthread_t int
 #endif
 
-
+// Telnet I/O stream
 
 class iotelnet : public iobase
 {
  protected:
+  // sockets and ports
   volatile int newsockfd;
   int sockfd;
   int port;

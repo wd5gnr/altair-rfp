@@ -25,7 +25,7 @@ Altairrfp (c) 2011 by Al Williams.
 // Issues:
 // TODO: Move to portable C++ socket class so it will work with mingw etc.
 
-
+// This is the telnet IO stream
 #include <stdio.h>
 #include <string.h>  // for bzero
 #include <fcntl.h>
@@ -41,6 +41,7 @@ Altairrfp (c) 2011 by Al Williams.
 #include <stdlib.h>
 
 
+// Construct telnet on given stream and port #
 iotelnet::iotelnet(streamtype st,int portno) : iobase(st)
 {
 #if defined(NOTELNET)
@@ -57,6 +58,7 @@ iotelnet::iotelnet(streamtype st,int portno) : iobase(st)
 #endif
 }
 
+// Get a connection
 void *iotelnet::connect(void *_this)
 {
 #if !defined(NOTELNET)
@@ -85,7 +87,7 @@ void *iotelnet::connect(void *_this)
       return NULL;
     }
 
-
+  // wait for a connection
   while (1)
     {
       obj->newsockfd=-1;
@@ -110,17 +112,9 @@ iotelnet::~iotelnet()
   // otherwise you get all this strange
   // race behavior as everything tries
   // to shut down together
-#if 0
-  int fd=newsockfd;
-  newsockfd=-1;
-  if (fd>0) 
-    {
-      shutdown(fd,2);
-      close(fd);
-    }
-#endif
 }
 
+// get character (raw, no pushback)
 int iotelnet::getch(void)
 {
 #if !defined(NOTELNET)
@@ -144,19 +138,20 @@ int iotelnet::getch(void)
 
   
 
+// This is the getchar you want to use; calls getch
 int iotelnet::getchar(void)
 {
   int c=-1;
 #if !defined(NOTELNET)
   unsigned char ch,cc[2];
  getagn:
-  if (cbuffer!=-1)
+  if (cbuffer!=-1)  // if there is a pushback buffer, use it
     {
       ch=c=cbuffer;
       cbuffer=-1;
     }
   else 
-    ch=c=getch();
+    ch=c=getch();  // otherwise get character
   
   // consume IAC responses
   // not sure this will always work but should be ok for the kinds of things we do
@@ -175,6 +170,7 @@ int iotelnet::getchar(void)
       return -1;
     }
   
+  // Check for kill character
   if (killchar!=-1 && c==killchar)
     {
       do { c=getch();  } while (c==-1);
@@ -184,13 +180,14 @@ int iotelnet::getchar(void)
   return c;
 }
 
+// is character waiting
 int iotelnet::ischar(void)
 {
   if (cbuffer==-1) cbuffer=getch();
   return cbuffer!=-1;
 }
 
-
+// put a character
 void iotelnet::putchar(int c)
 {
 #if !defined(NOTELNET)
@@ -210,6 +207,7 @@ void iotelnet::putchar(int c)
 #endif
 }
 
+// Is the stream ready?
 int iotelnet::ready(void)
 {
 #if !defined(NOTELNET)

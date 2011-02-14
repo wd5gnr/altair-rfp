@@ -30,13 +30,17 @@ Altairrfp (c) 2011 by Al Williams.
 #undef putchar
 #undef getchar
 
+// Base class for all I/O (console, file, telnet, etc.)
 class iobase
 {
  protected:
+  // most users will get to these via static methods
+  // selecting one of the streams
   static iobase *streams[];
   static int init;
   static void deleteall(void);
  public:
+  // stream types
  enum streamtype 
   {
     ERROROUT,
@@ -45,35 +49,48 @@ class iobase
     CONTROL,
     DEBUG
   };
+
+ // Get a char
   static int getchar(streamtype st) 
   {
     if (!streams[st]) return -1;
     return streams[st]->getchar();
   }
+
+  // Is there a char waiting?
   static int ischar(streamtype st)
   {
     if (!streams[st]) return 0;
     return streams[st]->ischar();
   }
+
+  // put a character out
   static void putchar(streamtype st,int c)
   {
     if (!streams[st]) return;
     streams[st]->putchar(c);
   }
 
+  // This character exits the simulator if you send it followed
+  // by any other character. If you send it twice, the simulator
+  // receives one copy
   int killchar;
+
+  // Is this device ready?
   virtual int ready(void) { return 1;  }
+  // static version
   static int ready(streamtype st)
   {
     if (!streams[st]) return 1;
     return streams[st]->ready();
   }
   
-    
+  // core functions    
   virtual int getchar(void);
   virtual int ischar(void);
   virtual void putchar(int c);
   
+  // This printf works for any subclass
   static void printf(streamtype st, const char *fmt,...)
   {
     if (!streams[st]) return;
@@ -84,14 +101,20 @@ class iobase
     va_end(args);
     streams[st]->puts(buffer);
   }
+
+  // put a string
   static void puts(streamtype st, const char *s)
   {
     if (!streams[st]) return;
     streams[st]->puts(s);
   }
+
   virtual void puts(const char *s);
+
   iobase(streamtype type);
   virtual ~iobase();
+
+  // duplicate one slot to another
   static void dup(streamtype dst, streamtype src)
   {
     streams[dst]=streams[src];
@@ -100,13 +123,17 @@ class iobase
 };
 
 
+// Console I/O specialization
+
 class console : public iobase
 {
  protected:
   FILE *out;
  public:
+  // note: could have file handle output
   console(iobase::streamtype st,FILE *outstream=stderr) ;
   virtual ~console();
+  // custom functions
   int getchar(void);
   int ischar(void);
   void putchar(int c);

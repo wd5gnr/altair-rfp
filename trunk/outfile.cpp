@@ -24,6 +24,8 @@ Altairrfp (c) 2011 by Al Williams.
 ***********************************************************************/
 #include "outfile.h"
 
+// Stream that is an output file (no input)
+
 outfile::outfile(streamtype type, const char *fn) : iobase(type)
 {
   fp=fopen(fn,"w");

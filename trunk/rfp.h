@@ -22,6 +22,8 @@ Altairrfp (c) 2011 by Al Williams.
     along with Altairrfp.  If not, see <http://www.gnu.org/licenses/>.
 
 ***********************************************************************/
+// Main header file
+
 #ifndef _RFP_H
 #define _RFP_H
 extern "C" 
@@ -40,15 +42,15 @@ class RFP;
 class RFP 
 {
  protected:
-  int ready;
+  int ready;  // ready to go
   int soft;  // if 1, then software only
   void sendcmd2(char c, unsigned u);
   unsigned read2(char c);
-  unsigned add;
-  unsigned dat;
-  unsigned status;
-  unsigned oldhadd;
-  unsigned oldstat;
+  unsigned add;  // address
+  unsigned dat;  // data
+  unsigned status;  // status
+  unsigned oldhadd;  // caches
+  unsigned oldstat;  
  public:
   RFP(char *port, int software=0);
   ~RFP();
@@ -69,12 +71,12 @@ class RFP
   void setRW(int bit=1);
   void releaseDB(void);
   // high level
-  void setstate(void);
-  void execute(RAM& ram);
+  void setstate(void);  // set state
+  void execute(RAM& ram);  // execute an instruction
 };
 
   
-
+// references for everyone
 extern CPU *thecpu;
 extern RFP *theRFP;
   
