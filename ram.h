@@ -28,6 +28,7 @@ Altairrfp (c) 2011 by Al Williams.
 #include "iobase.h"
 #include "rfp.h"
 
+// Class representing memory (no implementation file at all)
 
 class RAM
 {
@@ -35,6 +36,7 @@ class RAM
   unsigned len;
   unsigned char *memory;
   RFP& rfp;
+  // set the front panel LEDs if possible
   void setstatus(unsigned a, unsigned status=0xFF) 
   {
     if (statusskip && statusct--) return;
@@ -49,9 +51,10 @@ class RAM
  RAM(RFP &r, unsigned siz=0x10000, char *filen=NULL) : rfp(r) { memory=new unsigned char[len=siz]; statusct=0;  statusskip=0;
     if  (filen) load(filen);  };
   ~RAM() { delete memory; }
+  // track infrequent updates
   unsigned statusct;
   unsigned statusskip;
-  void load(const char *filen)   // todo: more error checking
+  void load(const char *filen,unsigned off=0, unsigned flen=0xFFFF)   // todo: more error checking
   {
            FILE *f=fopen(filen,"rb");
 	   if (!f) 
@@ -59,13 +62,13 @@ class RAM
 	       iobase::printf(iobase::ERROROUT,"Failed to read %s\n",filen);
 	       return;
 	     }
-	   int dbg=fread(memory,len,1,f);
+	   int dbg=fread(memory+off,len>flen?flen:len,1,f);
            fclose(f);
   }
-  void save(const char *filen)
+  void save(const char *filen, unsigned off=0, unsigned flen=0xFFFF)
   {
     FILE *f=fopen(filen,"wb");
-    fwrite(memory,len,1,f);
+    fwrite(memory+off,len>flen?flen:len,1,f);
     fclose(f);
   }
   

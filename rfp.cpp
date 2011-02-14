@@ -22,6 +22,8 @@ Altairrfp (c) 2011 by Al Williams.
     along with Altairrfp.  If not, see <http://www.gnu.org/licenses/>.
 
 ***********************************************************************/
+// Main file
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +54,7 @@ RFP::RFP(char *port, int software)
   oldhadd=0x100;  // impossible values for cache
   oldstat=0x100;
   status=5;
-  if (software)
+  if (software)  // if software==1 then no real front panel
       ready=1;
   else
     ready=(rfp_openport(port)>=0);
@@ -68,6 +70,7 @@ RFP::~RFP()
   ready=0;
 }
 
+// send cmd with byte
 void RFP::sendcmd2(char c, unsigned u)
 {
   char cmd[8];
@@ -77,12 +80,14 @@ void RFP::sendcmd2(char c, unsigned u)
   rfp_cmd(cmd);
 }
 
-
+// Get firmware ID
 unsigned RFP::getID(void) 
 {
+  // note that this returns 0 if software=1
   return read2('?');
 }
 
+// Set high address 
 void RFP::setAhigh(unsigned a)
 {
   if (a==oldhadd||soft) return;
@@ -91,48 +96,56 @@ void RFP::setAhigh(unsigned a)
 }
 
 
+// set low address
 void RFP::setAlow(unsigned a)
 {
   sendcmd2('a',a);
 }
 
+// set CS
 void RFP::setCS(int bit)
 {
   if (soft) return;
   rfp_emit(bit?'C':'c');
 }
 
+// Set IO
 void RFP::setIO(int bit)
 {
   if (soft) return;
   rfp_emit(bit?'I':'i');
 }
 
+// Set RW
 void RFP::setRW(int bit)
 {
   if (soft) return;
   rfp_emit(bit?'W':'w');
 }
 
+// Release data bus
 void RFP::releaseDB(void)
 {
   if (soft) return;
   rfp_emit('Z');
 }
 
+// output to databus
 void RFP::setDB(unsigned d)
 {
   sendcmd2('D',d);
 }
 
+// Set LEDs
 void RFP::setLED(unsigned l)
 {
-  if (oldstat==l) return;
+  if (oldstat==l) return; // don't send the same thing twice
   sendcmd2('L',l);
   oldstat=l;
 }
 
 
+// Get two characters
 unsigned RFP::read2(char c)
 {
   char co[3];
@@ -147,8 +160,10 @@ unsigned RFP::read2(char c)
 }
 
   
+// Used by contterm to flip switches
 extern volatile int virt_switch, virt_smask, virt_sreset;
 
+// process real switches (func) with virtual switches
 unsigned int virtsw(int func)
 {
   if (virt_smask)
@@ -161,28 +176,32 @@ unsigned int virtsw(int func)
 }
 
 
-
+// Get databus
 unsigned RFP::getDB(void)
 {
   return read2('d');
 }
 
+// Get low switches
 unsigned RFP::getSWLow(void)
 {
   return read2('S');
 }
 
+// Get high switches
 unsigned RFP::getSWHigh(void)
 {
   if (soft) return 0x08;  // A11 on for Basic
   return read2('T');
 }
 
+// Get Function switches
 unsigned RFP::getSWFunc(void)
 {
   return read2('U');
 }
 
+// Set full machine state 
 void RFP::setstate(void)
 {
   setAhigh(add>>8);
@@ -215,11 +234,13 @@ int xstream;
 // add more
 
 
+// PROGRAM STARTS HERE!
 int main(int argc, char *argv[])
 {
   int c;
   *estream=*tstream=*dstream=*port=*fn='\0';
   xstream=cstream=0;
+  // no command line?
   if (argc==1)
     {
     help:
@@ -242,6 +263,7 @@ int main(int argc, char *argv[])
       
       return 1;
     }
+  // process options
   opterr = 0;
   while ((c = getopt (argc, argv, "k:p:rtb:l:m:hf:uC:T:D:E:X:")) != -1)
          switch (c)
@@ -309,7 +331,9 @@ int main(int argc, char *argv[])
 	     break;
            }
      
+  // set run only if set specifically or if no front panel
   if (runonly==-1) runonly=softonly;
+  // create I/O streams
   iobase *io=new console(iobase::CONSOLE);
   if (*estream)
     {
@@ -354,6 +378,7 @@ int main(int argc, char *argv[])
 #endif
 
   io->killchar=killchar;
+  // create RFP and RAM
   RFP rfp(port,softonly);
   RAM ram(rfp,memsize,*fn?fn:NULL);
 
@@ -364,6 +389,7 @@ int main(int argc, char *argv[])
   
 #endif  // note: "normal" console is always ready
 
+  // if we are ready then execute
   if (rfp.isReady())  
     {
       rfp.execute(ram); 
@@ -374,21 +400,24 @@ int main(int argc, char *argv[])
 
 
 
-
+// This is the main part of the simulator
 void RFP::execute(RAM& ram)
 {
   int tracing=0;
   dat=ram.read(add);
   setstate();
+  // create CPU
   CPU cpu(ram,*this);
   thecpu=&cpu;
   thecpu->upper=upper;
   while (1)
     {
+      // reaad function switches
       int func=runonly?1:getSWFunc();
       func=virtsw(func);
+      // see if we are tracing
       tracing=forcetrace||((func&0x40)==0x40);
-      if ((func&0x80))
+      if ((func&0x80))  // reset?
 	{
 	cpureset:
 	  int cmd;
@@ -418,7 +447,7 @@ void RFP::execute(RAM& ram)
 	    }
 	  while (getSWFunc()&0x80);  // wait for release
 	}
-      else if (func&1)
+      else if (func&1)  // running
 	{ 
 	  // we are running so attend to that first
 	  ram.statusct=0;
@@ -426,40 +455,43 @@ void RFP::execute(RAM& ram)
 	  while (func&1) 
 	    {
 	      // main run loop
-	      // eventually check for breakpoints etc.
-	      // tell CPU to do next instruction etc.
+	      // figure out breakpoint status
 	      int action=-1;
 	      tracing=forcetrace||((func&0x40)==0x40);
 	      if (cpu.isInst()) for (int b=0;b<27;b++)
 		{
 		  int act;
 		  act=bps[b].check();
-		  if (act==1) tracing=1;
+		  if (act==1) tracing=1;  // trace point
+		  // enable a breakpoint
 		  if (act&0x80) bps[action&0x3F].setstate(1);
+		  // disable a breakpoint
 		  if (act&0x40) bps[action&0x3F].setstate(0);
-		  if (act==0)
+		  if (act==0)  // stop
 		    {
 		      action=act;
 		      break;
 		    }
 		}
-	      if (action!=0)
+	      // if action==-1 then keep going 
+	      if (action!=0) // not a stop
 		{
-		  cpu.step();
-		  add=cpu.pc;
-		  dat=ram.read(add);
+		  cpu.step();  // do a step
+		  add=cpu.pc; // set the new address
+		  dat=ram.read(add); // get the address
+		  // trace if required
 		  if (tracing && cpu.isInst()) cpu.dump();
 		} 
 	      else   // if at breakpoint, release
 		sched_yield();
 	      
-	      // Make this cmd line switchable
+	      // check to see if it is still running
 	      func=virtsw(runonly?1:(ram.statusct==0?getSWFunc():1));
 	      if (func&0x80) goto cpureset;  // reset during run
 	    }
 	  ram.statusskip=0;  // only skip during run
 	}
-      else if (func & 2)
+      else if (func & 2)  // step
 	{
 	  // step
 	  // tell CPU to do next instruction
@@ -470,7 +502,7 @@ void RFP::execute(RAM& ram)
 	  if (tracing) cpu.dump();
 	  while (getSWFunc()&2);  // wait for release
 	}
-      else if (func & 4)
+      else if (func & 4)   // examine
 	{
 	  // examine
 	  unsigned hi, lo;
@@ -481,7 +513,7 @@ void RFP::execute(RAM& ram)
 	  // could do dumps etc
 	  while (getSWFunc()&4);  // wait for release
 	}
-      else if (func & 8)
+      else if (func & 8)  
 	{
 	  // ex next
 	  dat=ram.read(++add);
