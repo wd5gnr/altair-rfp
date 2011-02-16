@@ -9,7 +9,7 @@ LDFLAGS=-lpthread
 LOADLIBES=
 LDLIBS=
 VPATH=$(SRC)
-SRCS=rs232.c rfp.cpp cpu.cpp iobase.cpp outfile.cpp contterm.cpp iotelnet.cpp breakpoint.cpp coniol.cpp
+SRCS=rs232.c rfp.cpp cpu.cpp iobase.cpp outfile.cpp contterm.cpp iotelnet.cpp breakpoint.cpp coniol.cpp options.cpp
 OBJ0=$(SRCS:.cpp=.o)
 OBJS=$(OBJ0:.c=.o)
 
