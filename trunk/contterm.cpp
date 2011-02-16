@@ -196,15 +196,48 @@ void f_step(void)
 // TODO: save and load need start address and count (see f_disp)
 void f_save(void)
 {
+  unsigned start=0;
+  unsigned len0=thecpu->ram.getlen(), len;
   char *t=strtok(NULL,"\r\n");
-  if (t)
-      thecpu->ram.save(t);
+  len=len0;
+  if (!t||!*t) f_help();
+  if (*t=='@')
+    {
+      start=strtonum(t+1);
+      t=strtok(NULL,"\r\n");
+    }
+  if (!t||!*t) f_help();
+  if (*t=='-')
+    {
+      len=strtonum(t+1);
+      if (len>len0) len=len0;
+      t=strtok(NULL,"\r\n");
+    }
+  if (!t||!*t) f_help;
+  thecpu->ram.save(t,start,len);
 }
 
 void f_load(void)
 {
+  unsigned start=0;
+  unsigned len0=thecpu->ram.getlen(), len;
   char *t=strtok(NULL,"\r\n");
-  if (t)
+  len=len0;
+  if (!t||!*t) f_help();
+  if (*t=='@')
+    {
+      start=strtonum(t+1);
+      t=strtok(NULL,"\r\n");
+    }
+  if (!t||!*t) f_help();
+  if (*t=='-')
+    {
+      len=strtonum(t+1);
+      if (len>len0) len=len0;
+      t=strtok(NULL,"\r\n");
+    }
+  if (!t||!*t) f_help;
+
       thecpu->ram.load(t);
 }
 
@@ -392,6 +425,8 @@ void f_bp(void)
 	  iobase::printf(iobase::CONTROL,"?error\r\n");
 	  return;
 	}
+      // portable strupr
+      for (tmp=tag;*tmp;tmp++) *tmp=toupper(*tmp);
       tmp=strtok(NULL," \t,");
       if (!tmp || !*tmp) goto bperr;
       v=strtonum(tmp);
@@ -406,6 +441,8 @@ void f_bp(void)
       char *tmp;
       tag=strtok(NULL," \t,");
       if (!tmp || !*tmp) goto bperr;
+      // portable strupr
+      for (tmp=tag;*tmp;tmp++) *tmp=toupper(*tmp);
       tmp=strtok(NULL," \t,");
       if (tmp && *tmp) mask=strtonum(tmp);
       theRFP->bps[bp].init(1,tag,0x10000,mask);
@@ -489,7 +526,7 @@ struct cmdentry
     { "exit", f_exit , "exit - End simulator" },
     { "help", f_help , "help [keyword] - Get help" },
     { "hex", f_hex, "hex - Set default radix to hex (override # -decimal, & - octal, $ - hex)"  },
-    { "load", f_load, "load file - Load RAM with file" },
+    { "load", f_load, "load [@start] [-len] file - Load RAM with file" },
     { "n", f_n, "n - step + regs command"  },
     { "oct", f_oct,  "oct - Set default radix to octal (override # -decimal, & - octal, $ - hex)" },
     { "reg", f_reg,  "reg register [value] - Display/set register (AF, BC, DE, HL, SP, PC for 8080" },
@@ -498,7 +535,7 @@ struct cmdentry
     { "reset", f_reset, "reset - Reset CPU" },
     { "resume", f_resume, "resume - Continue after breakpoint"   },
     { "run", f_run, "run - Run/resume program"  },
-    { "save", f_save, "save filename - Save RAM to file"   },
+    { "save", f_save, "save [@start] [-len] filename - Save RAM to file"   },
     { "set", f_set, "set address - Set RAM (Esc to quit)"   },
     { "step", f_step, "step - Single step program"  },
     { "stop", f_stop, "stop - Stop program execution" }

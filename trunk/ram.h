@@ -48,6 +48,7 @@ class RAM
   }
   
  public:
+  unsigned getlen(void)  { return len; }
  RAM(RFP &r, unsigned siz=0x10000, char *filen=NULL) : rfp(r) { memory=new unsigned char[len=siz]; statusct=0;  statusskip=0;
     if  (filen) load(filen);  };
   ~RAM() { delete memory; }
