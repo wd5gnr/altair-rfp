@@ -125,4 +125,5 @@ int options::process_options(int argc, char *argv[])
   if (runonly==-1) runonly=softonly;
   // set up C linkage
   baudselect=baud;
+  return 0;
 }

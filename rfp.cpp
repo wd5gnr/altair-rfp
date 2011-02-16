@@ -239,7 +239,7 @@ int xstream;
 // PROGRAM STARTS HERE!
 int main(int argc, char *argv[])
 {
-  options::process_options(argc, argv);
+  if ( options::process_options(argc, argv)) return 1;
   // create I/O streams
   iobase *io=new console(iobase::CONSOLE);
   if (*options::estream)
