@@ -29,11 +29,11 @@ Altairrfp (c) 2011 by Al Williams.
 #include <string.h>
 #include "rfp.h"
 #include "cpu.h"
-#include "getopt.h"
 #include "iobase.h"
 #include "outfile.h"
 #include <ctype.h>
 #include "iotelnet.h"
+#include "options.h"
 #if !defined(NOTELNET)
 #include <pthread.h>
 // linkage to control terminal routine
@@ -43,6 +43,7 @@ extern pthread_t controlthread;
 #define sched_yield()
 #endif
 
+// Globals to make it easy to find the CPU and the front panel
 CPU *thecpu=NULL;
 RFP *theRFP=NULL;
 
@@ -211,7 +212,7 @@ void RFP::setstate(void)
 }
 
 
-
+#if 0
 // options from command line
 int runonly=-1;
 // 0=9600, 1=19200, 2=56700, 3=115200, 4=230400
@@ -232,155 +233,60 @@ char estream[1024];
 int xstream;
  
 // add more
+#endif
 
 
 // PROGRAM STARTS HERE!
 int main(int argc, char *argv[])
 {
-  int c;
-  *estream=*tstream=*dstream=*port=*fn='\0';
-  xstream=cstream=0;
-  // no command line?
-  if (argc==1)
-    {
-    help:
-      fprintf(stderr,
-"altairrfp V0.5 by Al Williams http://www.hotsolder.com\n"
-"Usage: altairrfp [-p port_name] [-b baudcode] [-l skipupdates] [-m memorysize] [-r] [-t] [-k char]\n"
-"[-u] [-f load_file] [-C telnetport] [-E stream] [-T stream] [-D stream] [-X telnetport]\n"
-	      "\tskipupdates: Skips updating LEDs in run mode to speed execution\n"
-	      "\tmemorysize: RAM size in decimal (default=65536)\n"
-	      "\t-r forces the CPU to run and ignores front panel switches (faster execution)\n"
-	      "\t-t forces tracing on regardless of the state of the protect switch\n"
-	      "\t-p Sets port name to use for remote front panel\n"
-	      "\tbaudcodes: 0=>9600, 1=>19200, 2=>57k, 3=>115k; default=0\n"
-	      "\t-u forces input to uppercase\n"
-	      "\t-k sets a character used to exit the emulator\n"
-	      "\t-C sets the console telnet port (if omitted, the standard I/O is used)\n"
-	      "\t-E -T -D - sets the error, trace, and debug streams. All of these default to the console. If the argument is numeric it is taken as a telnet port. If the argument is a string, it is taken as a file name. Existing files will be overwritten.\n"
-	      "\t-X sets the control terminal telnet port. By default there is no control terminal\n"
-	      "\n\tNote: DO NOT USE THE RESET SWITCH. AUX acts as reset/save. Prot turns on tracing.\nWarning: Make sure Altair internal terminal is off before connecting external serial port\n");
-      
-      return 1;
-    }
-  // process options
-  opterr = 0;
-  while ((c = getopt (argc, argv, "k:p:rtb:l:m:hf:uC:T:D:E:X:")) != -1)
-         switch (c)
-           {
-	   case 'E':
-	     strcpy(estream,optarg);
-	     break;
-	     
-	   case 'X':
-	     if (runonly==-1) runonly=0;  // don't force run if control port
-	     xstream=atoi(optarg);
-	     break;
-	     
-	   case 'C':
-	     cstream=atoi(optarg);
-	     break;
-	     
-	   case 'T':
-	     strcpy(tstream,optarg);
-	     break;
-	     
-	   case 'D':
-	     strcpy(tstream,optarg);
-	     break;
-	     
-	   case 'k':
-	     killchar=optarg[0];
-	     break;
-	     
-	   case 'p':
-	     softonly=0;
-	     strcpy(port,optarg);
-	     break;
-	     
-           case 'r':
-             runonly = 1;
-             break;
-	   case 'h':
-	   case '?':
-	     goto help;
-	     break;
-	     
-	   case 'u':
-	     upper=1;
-	     break;
-	     
-           case 'b':
-             baud=atoi(optarg);
-	     if (baud<0||baud>3) goto help;
-             break;
-
-	   case 'l':
-	     skip=atoi(optarg);
-	     break;
-
-	   case 't':
-	     forcetrace=1;
-	     break;
-	     
-	   case 'm':
-	     memsize=atoi(optarg);
-	     break;
-	   case 'f':
-	     strcpy(fn,optarg);
-	     break;
-           }
-     
-  // set run only if set specifically or if no front panel
-  if (runonly==-1) runonly=softonly;
+  options::process_options(argc, argv);
   // create I/O streams
   iobase *io=new console(iobase::CONSOLE);
-  if (*estream)
+  if (*options::estream)
     {
-      if (isdigit(*estream)) 
-	new iotelnet(iobase::ERROROUT,atoi(estream));
+      if (isdigit(*options::estream)) 
+	new iotelnet(iobase::ERROROUT,atoi(options::estream));
       else
-	new outfile(iobase::ERROROUT,estream);
+	new outfile(iobase::ERROROUT,options::estream);
     }
   else iobase::dup(iobase::ERROROUT,iobase::CONSOLE);
-  if (*dstream)
+  if (*options::dstream)
     {
-      if (isdigit(*dstream)) 
-	new iotelnet(iobase::DEBUG,atoi(dstream));
+      if (isdigit(*options::dstream)) 
+	new iotelnet(iobase::DEBUG,atoi(options::dstream));
       else 
-	  new outfile(iobase::DEBUG,dstream);
+	  new outfile(iobase::DEBUG,options::dstream);
     }
   else iobase::dup(iobase::DEBUG,iobase::CONSOLE);
-  if (cstream)
+  if (options::cstream)
     {
-      io=new iotelnet(iobase::CONSOLE,cstream);
-      if (!*estream) iobase::dup(iobase::ERROROUT,iobase::CONSOLE);
-      if (!*dstream) iobase::dup(iobase::DEBUG,iobase::CONSOLE);
+      io=new iotelnet(iobase::CONSOLE,options::cstream);
+      if (!*options::estream) iobase::dup(iobase::ERROROUT,iobase::CONSOLE);
+      if (!*options::dstream) iobase::dup(iobase::DEBUG,iobase::CONSOLE);
     }
 
   // default trace is a duplicate of the console
   iobase::dup(iobase::TRACE,iobase::CONSOLE);
-  if (*tstream)
+  if (*options::tstream)
     {
-      if (isdigit(*tstream)) 
-	new iotelnet(iobase::TRACE,atoi(tstream));
+      if (isdigit(*options::tstream)) 
+	new iotelnet(iobase::TRACE,atoi(options::tstream));
       else
-	  new outfile(iobase::TRACE,tstream);
+	  new outfile(iobase::TRACE,options::tstream);
     }
 #if !defined(NOTELNET)
-  if (xstream)
+  if (options::xstream)
     {
-      iobase *control= new iotelnet(iobase::CONTROL,xstream);
+      iobase *control= new iotelnet(iobase::CONTROL,options::xstream);
       // wait for first control terminal
       while (!control->ready()) sched_yield();
       pthread_create(&controlthread,NULL,controlterm,NULL);
     }
 #endif
-
-  io->killchar=killchar;
+  io->killchar=options::killchar;
   // create RFP and RAM
-  RFP rfp(port,softonly);
-  RAM ram(rfp,memsize,*fn?fn:NULL);
+  RFP rfp(options::port,options::softonly);
+  RAM ram(rfp,options::memsize,*options::fn?options::fn:NULL);
 
   rfp.io=io;
   // wait for connect from console
@@ -409,19 +315,19 @@ void RFP::execute(RAM& ram)
   // create CPU
   CPU cpu(ram,*this);
   thecpu=&cpu;
-  thecpu->upper=upper;
+  thecpu->upper=options::upper;
   while (1)
     {
       // reaad function switches
-      int func=runonly?1:getSWFunc();
+      int func=options::runonly?1:getSWFunc();
       func=virtsw(func);
       // see if we are tracing
-      tracing=forcetrace||((func&0x40)==0x40);
+      tracing=options::forcetrace||((func&0x40)==0x40);
       if ((func&0x80))  // reset?
 	{
 	cpureset:
 	  int cmd;
-	  if (xstream==0) 
+	  if (options::xstream==0) 
 	    {
 	      iobase::printf(iobase::CONTROL,"\n<R>eset, <S>ave, e<X>it, or <C>ontinue? ");
 	      do
@@ -451,13 +357,13 @@ void RFP::execute(RAM& ram)
 	{ 
 	  // we are running so attend to that first
 	  ram.statusct=0;
-	  ram.statusskip=skip;
+	  ram.statusskip=options::skip;
 	  while (func&1) 
 	    {
 	      // main run loop
 	      // figure out breakpoint status
 	      int action=-1;
-	      tracing=forcetrace||((func&0x40)==0x40);
+	      tracing=options::forcetrace||((func&0x40)==0x40);
 	      if (cpu.isInst()) for (int b=0;b<27;b++)
 		{
 		  int act;
@@ -486,7 +392,7 @@ void RFP::execute(RAM& ram)
 		sched_yield();
 	      
 	      // check to see if it is still running
-	      func=virtsw(runonly?1:(ram.statusct==0?getSWFunc():1));
+	      func=virtsw(options::runonly?1:(ram.statusct==0?getSWFunc():1));
 	      if (func&0x80) goto cpureset;  // reset during run
 	    }
 	  ram.statusskip=0;  // only skip during run

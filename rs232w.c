@@ -31,6 +31,7 @@ Altairrfp (c) 2011 by Al Williams.
 #include <windows.h>
 #include <stdio.h>
 #include "rs232.h"
+#include "options.h"
 
 /** If DEBUGOUT=1 then the platform-specific code will generate
  * interesting debug messages.
@@ -48,7 +49,6 @@ Altairrfp (c) 2011 by Al Williams.
 
 static HANDLE comport;  // file descriptor
 
-extern int baud;
 
 static char *bauds[]=
   {
@@ -80,7 +80,7 @@ int rfp_openport(char *port)
 	   SetCommTimeouts(comport,&cto);
 	   dcb.DCBlength=sizeof(dcb);
 	   GetCommState(comport,&dcb);
-	   rv=BuildCommDCB(bauds[baud],&dcb);
+	   rv=BuildCommDCB(bauds[baudselect],&dcb);
 	   dcb.fBinary=TRUE;
 	   dcb.fDtrControl=DTR_CONTROL_DISABLE;
 	   dcb.fOutxDsrFlow=FALSE;

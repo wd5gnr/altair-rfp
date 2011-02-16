@@ -41,6 +41,7 @@ Altairrfp (c) 2011 by Al Williams.
 #include <termios.h>
 #include <fcntl.h>
 #include "rs232.h"
+#include "options.h"
 
 /* Must operate at */
 //#define BAUDRATE B115200
@@ -60,8 +61,7 @@ int BRTABLE[]=
     B230400
   };
 
-extern int baud;  // from command line
-#define BAUDRATE (BRTABLE[baud])
+#define BAUDRATE (BRTABLE[baudselect])
 
     
 
