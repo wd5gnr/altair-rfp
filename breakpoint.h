@@ -63,6 +63,11 @@ class breakpoint
   int check(void);
   // dump breakpoint info to stream in base
   void dump(iobase::streamtype,int base);
+  static void header(iobase::streamtype s)
+  {
+      iobase::printf(s,"ID ON  COND\t\t\tCOUNT\tACTION\r\n");
+
+  }
   
 
 

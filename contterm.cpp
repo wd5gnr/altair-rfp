@@ -179,6 +179,8 @@ void f_release(void)
 // reset CPU
 void f_reset(void)
 {
+  for (int i=0;i<27;i++) 
+    theRFP->bps[i].setannounce(0);
   virt_switch=0x80;
   virt_sreset=0;
   virt_smask=0x80;
@@ -188,7 +190,7 @@ void f_step(void)
 {
   virt_switch=2;
   virt_sreset=0;
-  virt_smask=2;
+  virt_smask=3;
 }
 
 
@@ -343,7 +345,9 @@ void f_n(void)
   // this has the advantage of only stopping on whole instructions
   // set private breakpoint
   theRFP->bps[26].init(1,"pc",0x10000,0xFFFF);
-  //  theRFP->bps[26].action=0x40+26;
+  // do not set OUR breakpoint to hold so 26 is the right #
+  for (int i=0;i<26;i++) 
+    if (theRFP->bps[i].getstate()==1) theRFP->bps[i].setstate(-1);
   virt_switch=1;
   virt_sreset=0;
   virt_smask=1;
@@ -355,7 +359,7 @@ void f_n(void)
   // this way steps one cycle at a time like step or the step button
   virt_switch=2;
   virt_sreset=0;
-  virt_smask=2;
+  virt_smask=3;
   while (virt_smask) sched_yield();;
 #endif
   f_regs();
@@ -382,7 +386,7 @@ void f_bp(void)
 		     "bp X (on|off) - enable or disable a breakpoint\r\n"
 		     "bp X once [(on|off)] - set oneshot mode; default is on\r\n"
 		     "bp X resume - allow execution to continue after breakpoint\r\n"
-		     "bp list [X] - show all breakpoints or one particular breakpoint\r\n"
+		     "bp list [X] - show all breakpoints or one particular breakpoint (X=* for only enabled)\r\n"
 		     "bp help - this message\r\n");
       return;
     }
@@ -390,8 +394,8 @@ void f_bp(void)
     {
       // list all breakpoints (or just one)
       int i;
-      // static member for breakpoint?
-      iobase::printf(iobase::CONTROL,"ID ON  COND\t\t\tCOUNT\tACTION\r\n");
+      // print header
+      breakpoint::header(iobase::CONTROL);
       tag=strtok(NULL," \t,");
       if (tag && *tag)
 	{
@@ -404,6 +408,7 @@ void f_bp(void)
 	}
       for (i=0;i<26;i++)
 	{
+	  if (tag && *tag=='*' && theRFP->bps[i].getstate()==0) continue;
 	  theRFP->bps[i].dump(iobase::CONTROL,base);
 	}
       return;
