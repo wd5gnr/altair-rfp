@@ -8,7 +8,7 @@
 int baudselect=0;
 
 // static C++ members
- int options::runonly=1;
+ int options::runonly=0;
  int options::baud=options::B9600;
  int options::forcetrace=0;
  unsigned options::skip=0;
